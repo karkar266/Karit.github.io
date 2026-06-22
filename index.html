@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Karit – Audius Search</title>
+    <title>Karit – YouTube Search</title>
     <style>
         :root {
             --bg-dark: #0a1128;
@@ -249,7 +249,7 @@
 
         <div class="page" id="page-search">
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Поиск в Audius (например, Skrillex)" />
+                <input type="text" id="searchInput" class="search-input" placeholder="Поиск на YouTube (например, Eminem)" />
                 <button id="searchBtn" class="search-btn">Найти</button>
             </div>
             <div class="tracks-grid" id="searchResultsGrid"></div>
@@ -298,9 +298,76 @@
 
     <script>
         (function() {
-            // Audius API – полные треки, без ключа
-            const AUDIUS_API = 'https://api.audius.co/v1/tracks/search?query=';
+            // ========== Invidious инстансы (можно дополнить) ==========
+            const INVIDIOUS_INSTANCES = [
+                'https://inv.nadeko.net',
+                'https://invidious.slipfox.xyz',
+                'https://vid.puffyan.us',
+                'https://invidious.privacydev.net',
+                'https://invidious.fdn.fr'
+            ];
 
+            // Получить рабочий инстанс (первый успешный)
+            async function getWorkingInstance() {
+                for (const instance of INVIDIOUS_INSTANCES) {
+                    try {
+                        const resp = await fetch(instance + '/api/v1/stats', { signal: AbortSignal.timeout(3000) });
+                        if (resp.ok) return instance;
+                    } catch (e) {}
+                }
+                throw new Error('Все инстансы недоступны');
+            }
+
+            let currentInstance = INVIDIOUS_INSTANCES[0];
+
+            // Поиск видео через Invidious
+            async function searchYouTube(query) {
+                try {
+                    // Обновляем рабочий инстанс
+                    currentInstance = await getWorkingInstance();
+                } catch (err) {
+                    console.warn('Не удалось найти рабочий инстанс, используем первый');
+                    currentInstance = INVIDIOUS_INSTANCES[0];
+                }
+
+                const url = `${currentInstance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&sort=relevance`;
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    // Оставляем только видео, где есть продолжительность (обычно музыка)
+                    const videos = data.filter(item => item.type === 'video' && item.lengthSeconds > 0);
+                    return videos.map(video => ({
+                        id: 'yt_' + video.videoId,
+                        title: video.title,
+                        artist: video.author,
+                        cover: video.videoThumbnails?.[0]?.url || '#ffffff',
+                        videoId: video.videoId,
+                        lengthSeconds: video.lengthSeconds,
+                        url: null // аудио-URL получим позже
+                    }));
+                } catch (err) {
+                    console.error('Ошибка поиска:', err);
+                    return [];
+                }
+            }
+
+            // Получить прямую ссылку на аудиодорожку видео
+            async function getAudioUrl(videoId) {
+                try {
+                    const resp = await fetch(`${currentInstance}/api/v1/videos/${videoId}`);
+                    const data = await resp.json();
+                    // Ищем аудиоформаты (itag 140 = M4A, 251 = WebM Opus)
+                    const audioFormat = data.adaptiveFormats?.find(f => f.itag === '251' || f.itag === '140');
+                    if (audioFormat) return audioFormat.url;
+                    // fallback: формируем ссылку напрямую (менее надёжно)
+                    return `${currentInstance}/latest_version?id=${videoId}&itag=251`;
+                } catch (e) {
+                    console.error('Не удалось получить аудио:', e);
+                    return null;
+                }
+            }
+
+            // ========== Глобальное состояние ==========
             let tracks = [];
             const INITIAL_PLACEHOLDER_COUNT = 8;
 
@@ -415,14 +482,23 @@
                 }
             }
 
-            function playTrack(playlistIndex) {
+            // Плеер
+            async function playTrack(playlistIndex) {
                 if (playlistIndex < 0 || playlistIndex >= currentPlaylist.length) return;
                 currentPlaylistIndex = playlistIndex;
                 const track = currentPlaylist[currentPlaylistIndex];
                 if (!track) return;
+
+                // Если трек из YouTube и ещё нет url – получаем аудио
+                if (track.videoId && !track.url) {
+                    const audioUrl = await getAudioUrl(track.videoId);
+                    if (audioUrl) track.url = audioUrl;
+                }
+
                 updatePlayerUI(track);
                 updatePlayingTileHighlight();
                 updateLikeButtonState(track);
+
                 if (track.url) {
                     audio.src = track.url;
                     audio.play().then(() => { isPlaying = true; updatePlayStates(); }).catch(() => { isPlaying = false; updatePlayStates(); });
@@ -533,25 +609,14 @@
                 playTrack(index);
             }
 
-            // Поиск через Audius
-            async function searchAudius(query) {
-                try {
-                    const res = await fetch(AUDIUS_API + encodeURIComponent(query));
-                    const data = await res.json();
-                    if (!data.data) return [];
-                    return data.data.map(track => ({
-                        id: 'au_' + track.id,
-                        title: track.title,
-                        artist: track.user.name,
-                        cover: track.artwork ? track.artwork['480x480'] || track.artwork['1000x1000'] : '#ffffff',
-                        url: track.stream_url ? (track.stream_url.startsWith('http') ? track.stream_url : 'https://api.audius.co' + track.stream_url) : null,
-                        isPlaceholder: false,
-                        duration: track.duration
-                    }));
-                } catch (err) {
-                    console.error('Ошибка Audius:', err);
-                    return [];
-                }
+            // Поиск
+            async function performSearch(query) {
+                searchBtn.disabled = true;
+                searchBtn.textContent = 'Поиск...';
+                const results = await searchYouTube(query);
+                renderSearchResults(results);
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Найти';
             }
 
             function renderSearchResults(results) {
@@ -580,21 +645,15 @@
                 }
             }
 
-            searchBtn.addEventListener('click', async () => {
+            searchBtn.addEventListener('click', () => {
                 const query = searchInput.value.trim();
-                if (query) {
-                    searchBtn.disabled = true;
-                    searchBtn.textContent = 'Поиск...';
-                    const results = await searchAudius(query);
-                    renderSearchResults(results);
-                    searchBtn.disabled = false;
-                    searchBtn.textContent = 'Найти';
-                }
+                if (query) performSearch(query);
             });
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchBtn.click();
             });
 
+            // Остальные обработчики
             likedSection.addEventListener('click', () => {
                 if (isPlayingLikedPlaylist()) togglePlay();
                 else playLikedRandom();
@@ -621,6 +680,7 @@
             volumeSlider.addEventListener('input', e => audio.volume = parseFloat(e.target.value));
             audio.volume = parseFloat(volumeSlider.value);
 
+            // Загрузка файлов
             uploadBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files).filter(f => f.type.startsWith('audio/'));
@@ -653,6 +713,7 @@
                 });
             }
 
+            // Инициализация
             renderTrackGrid();
             updateUploadedList();
             updatePlayStates();
