@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Karit – Jamendo Search</title>
+    <title>Karit – Deezer Search</title>
     <style>
-        /* ---------- Все стили как в последней версии (без изменений) ---------- */
         :root {
             --bg-dark: #0a1128;
             --bg-sidebar: #0d1535;
@@ -236,7 +235,6 @@
     </nav>
 
     <main class="main-content" id="mainContent">
-        <!-- Главная -->
         <div class="page active" id="page-main">
             <div class="liked-section" id="likedSection">
                 <div class="liked-card">
@@ -250,16 +248,14 @@
             <div class="tracks-section"><div class="tracks-grid" id="tracksGrid"></div></div>
         </div>
 
-        <!-- Поиск Jamendo -->
         <div class="page" id="page-search">
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Введите название трека или артиста..." />
+                <input type="text" id="searchInput" class="search-input" placeholder="Поиск по Deezer (например, Eminem)" />
                 <button id="searchBtn" class="search-btn">Найти</button>
             </div>
             <div class="tracks-grid" id="searchResultsGrid"></div>
         </div>
 
-        <!-- Загрузка -->
         <div class="page" id="page-upload">
             <div class="upload-page-content" style="display:flex; flex-direction:column; align-items:center; gap:20px; min-height:50vh; justify-content:center;">
                 <p style="font-size:18px;color:var(--text-secondary);">Загрузите свои аудиофайлы</p>
@@ -269,7 +265,6 @@
             </div>
         </div>
 
-        <!-- Аккаунт -->
         <div class="page" id="page-account">
             <div class="placeholder-page" style="display:flex; align-items:center; justify-content:center; height:60vh; font-size:28px; color:var(--text-tertiary);">Аккаунт</div>
         </div>
@@ -304,8 +299,9 @@
 
     <script>
         (function() {
-            // Твой client_id от Jamendo
-            const JAMENDO_CLIENT_ID = 'f8e6e502';
+            // Прокси для Deezer (обход CORS)
+            const CORS_PROXY = 'https://corsproxy.io/?'; 
+            const DEEZER_API = 'https://api.deezer.com/search?q=';
 
             let tracks = [];
             const INITIAL_PLACEHOLDER_COUNT = 8;
@@ -335,7 +331,7 @@
             audio.preload = 'metadata';
             audio.volume = 0.8;
 
-            // DOM
+            // DOM элементы
             const sidebarItems = document.querySelectorAll('.sidebar-item');
             const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
             const pages = document.querySelectorAll('.page');
@@ -375,7 +371,7 @@
             }
             [sidebarItems, mobileNavItems].forEach(group => group.forEach(el => el.addEventListener('click', () => switchPage(el.dataset.page))));
 
-            // Рендер главной сетки
+            // Рендер плиток
             function renderTrackGrid() {
                 const sorted = [...tracks].sort((a,b) => a.isPlaceholder ? 1 : -1);
                 tracksGrid.innerHTML = '';
@@ -543,21 +539,23 @@
                 playTrack(index);
             }
 
-            // Поиск Jamendo
-            async function searchJamendo(query) {
+            // 🔍 Поиск через Deezer (через CORS-прокси)
+            async function searchDeezer(query) {
                 try {
-                    const res = await fetch(`https://api.jamendo.com/v3.0/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&search=${encodeURIComponent(query)}&limit=20`);
+                    const url = CORS_PROXY + encodeURIComponent(DEEZER_API + encodeURIComponent(query));
+                    const res = await fetch(url);
                     const data = await res.json();
-                    return data.results.map(track => ({
-                        id: 'jamendo_' + track.id,
-                        title: track.name,
-                        artist: track.artist_name,
-                        cover: track.image || '#ffffff',
-                        url: track.audio,
+                    if (data.error) return [];
+                    return data.data.map(track => ({
+                        id: 'dz_' + track.id,
+                        title: track.title,
+                        artist: track.artist.name,
+                        cover: track.album.cover_medium,
+                        url: track.preview, // 30-сек превью
                         isPlaceholder: false,
                     }));
                 } catch (err) {
-                    console.error('Ошибка поиска:', err);
+                    console.error('Ошибка Deezer:', err);
                     return [];
                 }
             }
@@ -591,15 +589,19 @@
             searchBtn.addEventListener('click', async () => {
                 const query = searchInput.value.trim();
                 if (query) {
-                    const results = await searchJamendo(query);
+                    searchBtn.disabled = true;
+                    searchBtn.textContent = 'Поиск...';
+                    const results = await searchDeezer(query);
                     renderSearchResults(results);
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = 'Найти';
                 }
             });
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchBtn.click();
             });
 
-            // Обработчики кнопок
+            // Обработчики
             likedSection.addEventListener('click', () => {
                 if (isPlayingLikedPlaylist()) togglePlay();
                 else playLikedRandom();
@@ -659,7 +661,7 @@
                 });
             }
 
-            // Инициализация
+            // Старт
             renderTrackGrid();
             updateUploadedList();
             updatePlayStates();
