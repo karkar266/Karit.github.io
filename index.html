@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Clone</title>
+    <title>Karit</title>
     <style>
         :root {
             --bg-dark: #0a1128;
@@ -901,7 +901,7 @@
                     btnLike.classList.add('liked');
                     btnLike.title = 'Убрать из Любимых';
                 } else {
-                    btnLike.textContent = '🤍';
+                    btnLike.textContent = '♡';
                     btnLike.classList.remove('liked');
                     btnLike.title = 'Добавить в Любимые';
                 }
@@ -1147,7 +1147,6 @@
 
             // Запуск
             init();
-            console.log('Spotify Clone готов. Загрузите треки через вкладку «Загрузить с устройства».');
             console.log('Горячие клавиши: Пробел — Play/Pause, ← → — переключение треков, L — лайк.');
         })();
     </script>
