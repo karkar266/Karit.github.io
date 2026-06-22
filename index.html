@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Karit – YouTube Search</title>
+    <title>Karit – YouTube Search (обход CORS)</title>
     <style>
         :root {
             --bg-dark: #0a1128;
@@ -298,44 +298,50 @@
 
     <script>
         (function() {
-            // ========== Invidious инстансы (можно дополнить) ==========
+            // ========== CORS-прокси для обхода ограничений ==========
+            const CORS_PROXY = 'https://corsproxy.io/?';
+
+            // ========== Invidious инстансы ==========
             const INVIDIOUS_INSTANCES = [
-                'https://inv.nadeko.net',
-                'https://invidious.slipfox.xyz',
-                'https://vid.puffyan.us',
-                'https://invidious.privacydev.net',
-                'https://invidious.fdn.fr'
+                'inv.nadeko.net',
+                'invidious.nerdvpn.de',
+                'invidious.f5.si',
+                'yt.chocolatemoo53.com',
+                'inv.thepixora.com',   // этот поддерживает CORS напрямую, но для единообразия тоже через прокси
+                'invidious.tiekoetter.com'
             ];
 
-            // Получить рабочий инстанс (первый успешный)
             async function getWorkingInstance() {
+                // Пробуем найти инстанс, у которого через прокси доступен API
                 for (const instance of INVIDIOUS_INSTANCES) {
                     try {
-                        const resp = await fetch(instance + '/api/v1/stats', { signal: AbortSignal.timeout(3000) });
+                        const url = CORS_PROXY + encodeURIComponent(`https://${instance}/api/v1/stats`);
+                        const resp = await fetch(url, { signal: AbortSignal.timeout(3000) });
                         if (resp.ok) return instance;
                     } catch (e) {}
                 }
-                throw new Error('Все инстансы недоступны');
+                // fallback
+                return 'inv.nadeko.net';
             }
 
-            let currentInstance = INVIDIOUS_INSTANCES[0];
+            let currentInstance = 'inv.nadeko.net';
 
-            // Поиск видео через Invidious
+            // Поиск через Invidious с прокси
             async function searchYouTube(query) {
                 try {
-                    // Обновляем рабочий инстанс
                     currentInstance = await getWorkingInstance();
                 } catch (err) {
-                    console.warn('Не удалось найти рабочий инстанс, используем первый');
-                    currentInstance = INVIDIOUS_INSTANCES[0];
+                    console.warn('Используем запасной инстанс');
+                    currentInstance = 'inv.nadeko.net';
                 }
 
-                const url = `${currentInstance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&sort=relevance`;
+                const apiUrl = `https://${currentInstance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&sort=relevance`;
+                const proxiedUrl = CORS_PROXY + encodeURIComponent(apiUrl);
+
                 try {
-                    const res = await fetch(url);
+                    const res = await fetch(proxiedUrl);
                     const data = await res.json();
-                    // Оставляем только видео, где есть продолжительность (обычно музыка)
-                    const videos = data.filter(item => item.type === 'video' && item.lengthSeconds > 0);
+                    const videos = Array.isArray(data) ? data.filter(item => item.type === 'video' && item.lengthSeconds > 0) : [];
                     return videos.map(video => ({
                         id: 'yt_' + video.videoId,
                         title: video.title,
@@ -343,7 +349,7 @@
                         cover: video.videoThumbnails?.[0]?.url || '#ffffff',
                         videoId: video.videoId,
                         lengthSeconds: video.lengthSeconds,
-                        url: null // аудио-URL получим позже
+                        url: null
                     }));
                 } catch (err) {
                     console.error('Ошибка поиска:', err);
@@ -351,18 +357,21 @@
                 }
             }
 
-            // Получить прямую ссылку на аудиодорожку видео
+            // Получить прямую ссылку на аудио (через прокси)
             async function getAudioUrl(videoId) {
+                const videoApiUrl = `https://${currentInstance}/api/v1/videos/${videoId}`;
+                const proxiedUrl = CORS_PROXY + encodeURIComponent(videoApiUrl);
                 try {
-                    const resp = await fetch(`${currentInstance}/api/v1/videos/${videoId}`);
+                    const resp = await fetch(proxiedUrl);
                     const data = await resp.json();
-                    // Ищем аудиоформаты (itag 140 = M4A, 251 = WebM Opus)
-                    const audioFormat = data.adaptiveFormats?.find(f => f.itag === '251' || f.itag === '140');
-                    if (audioFormat) return audioFormat.url;
-                    // fallback: формируем ссылку напрямую (менее надёжно)
-                    return `${currentInstance}/latest_version?id=${videoId}&itag=251`;
+                    const fmt = data.adaptiveFormats?.find(f => f.itag === '251' || f.itag === '140');
+                    if (fmt && fmt.url) {
+                        // Прокси для самой аудиодорожки
+                        return CORS_PROXY + encodeURIComponent(fmt.url);
+                    }
+                    return null;
                 } catch (e) {
-                    console.error('Не удалось получить аудио:', e);
+                    console.error('Ошибка получения аудио:', e);
                     return null;
                 }
             }
@@ -489,7 +498,6 @@
                 const track = currentPlaylist[currentPlaylistIndex];
                 if (!track) return;
 
-                // Если трек из YouTube и ещё нет url – получаем аудио
                 if (track.videoId && !track.url) {
                     const audioUrl = await getAudioUrl(track.videoId);
                     if (audioUrl) track.url = audioUrl;
@@ -653,7 +661,6 @@
                 if (e.key === 'Enter') searchBtn.click();
             });
 
-            // Остальные обработчики
             likedSection.addEventListener('click', () => {
                 if (isPlayingLikedPlaylist()) togglePlay();
                 else playLikedRandom();
@@ -680,7 +687,6 @@
             volumeSlider.addEventListener('input', e => audio.volume = parseFloat(e.target.value));
             audio.volume = parseFloat(volumeSlider.value);
 
-            // Загрузка файлов
             uploadBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files).filter(f => f.type.startsWith('audio/'));
