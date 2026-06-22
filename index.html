@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Karit – YouTube Search (обход CORS)</title>
+    <title>Karit – Audius + топ-чарты</title>
     <style>
         :root {
             --bg-dark: #0a1128;
@@ -144,17 +144,20 @@
         }
 
         .search-container {
-            display: flex; gap: 10px; margin-bottom: 20px; max-width: 500px;
+            display: flex; gap: 10px; margin-bottom: 20px; max-width: 600px; flex-wrap: wrap;
         }
         .search-input {
             flex-grow: 1; padding: 12px 16px; border-radius: 30px; border: none;
             background: rgba(255,255,255,0.1); color: white; font-size: 16px; outline: none;
         }
         .search-input::placeholder { color: rgba(255,255,255,0.5); }
-        .search-btn {
+        .search-btn, .trending-btn {
             background: var(--accent); color: white; border: none; padding: 12px 24px;
             border-radius: 30px; font-weight: 700; cursor: pointer; transition: 0.2s;
+            white-space: nowrap;
         }
+        .trending-btn { background: rgba(255,255,255,0.1); }
+        .trending-btn:hover { background: rgba(255,255,255,0.2); }
         .search-btn:hover { background: #2563eb; transform: scale(1.04); }
 
         .player {
@@ -211,6 +214,8 @@
             .ctrl-btn svg { width: 20px; height: 20px; }
             .ctrl-btn.play-btn { width: 42px; height: 42px; }
             .ctrl-btn.play-btn svg { width: 24px; height: 24px; }
+            .search-container { flex-direction: column; align-items: stretch; }
+            .search-btn, .trending-btn { width: 100%; text-align: center; }
         }
     </style>
 </head>
@@ -249,8 +254,9 @@
 
         <div class="page" id="page-search">
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Поиск на YouTube (например, Eminem)" />
+                <input type="text" id="searchInput" class="search-input" placeholder="Поиск на Audius (например, Skrillex)" />
                 <button id="searchBtn" class="search-btn">Найти</button>
+                <button id="trendingBtn" class="trending-btn">Топ-чарты</button>
             </div>
             <div class="tracks-grid" id="searchResultsGrid"></div>
         </div>
@@ -298,85 +304,8 @@
 
     <script>
         (function() {
-            // ========== CORS-прокси для обхода ограничений ==========
-            const CORS_PROXY = 'https://corsproxy.io/?';
+            const AUDIUS_API = 'https://api.audius.co/v1/';
 
-            // ========== Invidious инстансы ==========
-            const INVIDIOUS_INSTANCES = [
-                'inv.nadeko.net',
-                'invidious.nerdvpn.de',
-                'invidious.f5.si',
-                'yt.chocolatemoo53.com',
-                'inv.thepixora.com',   // этот поддерживает CORS напрямую, но для единообразия тоже через прокси
-                'invidious.tiekoetter.com'
-            ];
-
-            async function getWorkingInstance() {
-                // Пробуем найти инстанс, у которого через прокси доступен API
-                for (const instance of INVIDIOUS_INSTANCES) {
-                    try {
-                        const url = CORS_PROXY + encodeURIComponent(`https://${instance}/api/v1/stats`);
-                        const resp = await fetch(url, { signal: AbortSignal.timeout(3000) });
-                        if (resp.ok) return instance;
-                    } catch (e) {}
-                }
-                // fallback
-                return 'inv.nadeko.net';
-            }
-
-            let currentInstance = 'inv.nadeko.net';
-
-            // Поиск через Invidious с прокси
-            async function searchYouTube(query) {
-                try {
-                    currentInstance = await getWorkingInstance();
-                } catch (err) {
-                    console.warn('Используем запасной инстанс');
-                    currentInstance = 'inv.nadeko.net';
-                }
-
-                const apiUrl = `https://${currentInstance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&sort=relevance`;
-                const proxiedUrl = CORS_PROXY + encodeURIComponent(apiUrl);
-
-                try {
-                    const res = await fetch(proxiedUrl);
-                    const data = await res.json();
-                    const videos = Array.isArray(data) ? data.filter(item => item.type === 'video' && item.lengthSeconds > 0) : [];
-                    return videos.map(video => ({
-                        id: 'yt_' + video.videoId,
-                        title: video.title,
-                        artist: video.author,
-                        cover: video.videoThumbnails?.[0]?.url || '#ffffff',
-                        videoId: video.videoId,
-                        lengthSeconds: video.lengthSeconds,
-                        url: null
-                    }));
-                } catch (err) {
-                    console.error('Ошибка поиска:', err);
-                    return [];
-                }
-            }
-
-            // Получить прямую ссылку на аудио (через прокси)
-            async function getAudioUrl(videoId) {
-                const videoApiUrl = `https://${currentInstance}/api/v1/videos/${videoId}`;
-                const proxiedUrl = CORS_PROXY + encodeURIComponent(videoApiUrl);
-                try {
-                    const resp = await fetch(proxiedUrl);
-                    const data = await resp.json();
-                    const fmt = data.adaptiveFormats?.find(f => f.itag === '251' || f.itag === '140');
-                    if (fmt && fmt.url) {
-                        // Прокси для самой аудиодорожки
-                        return CORS_PROXY + encodeURIComponent(fmt.url);
-                    }
-                    return null;
-                } catch (e) {
-                    console.error('Ошибка получения аудио:', e);
-                    return null;
-                }
-            }
-
-            // ========== Глобальное состояние ==========
             let tracks = [];
             const INITIAL_PLACEHOLDER_COUNT = 8;
 
@@ -427,6 +356,7 @@
             const uploadedList = document.getElementById('uploadedList');
             const searchInput = document.getElementById('searchInput');
             const searchBtn = document.getElementById('searchBtn');
+            const trendingBtn = document.getElementById('trendingBtn');
             const iconPlay = document.getElementById('iconPlay');
             const iconPause = document.getElementById('iconPause');
             const likedIconPlay = document.getElementById('likedIconPlay');
@@ -440,6 +370,9 @@
                 mobileNavItems.forEach(item => item.classList.toggle('active', item.dataset.page === pageName));
                 pages.forEach(page => page.classList.toggle('active', page.id === 'page-' + pageName));
                 document.getElementById('mainContent').scrollTop = 0;
+                if (pageName === 'search') {
+                    loadTrendingTracks(); // при открытии поиска сразу показываем топ-чарты
+                }
             }
             [sidebarItems, mobileNavItems].forEach(group => group.forEach(el => el.addEventListener('click', () => switchPage(el.dataset.page))));
 
@@ -491,22 +424,14 @@
                 }
             }
 
-            // Плеер
-            async function playTrack(playlistIndex) {
+            function playTrack(playlistIndex) {
                 if (playlistIndex < 0 || playlistIndex >= currentPlaylist.length) return;
                 currentPlaylistIndex = playlistIndex;
                 const track = currentPlaylist[currentPlaylistIndex];
                 if (!track) return;
-
-                if (track.videoId && !track.url) {
-                    const audioUrl = await getAudioUrl(track.videoId);
-                    if (audioUrl) track.url = audioUrl;
-                }
-
                 updatePlayerUI(track);
                 updatePlayingTileHighlight();
                 updateLikeButtonState(track);
-
                 if (track.url) {
                     audio.src = track.url;
                     audio.play().then(() => { isPlaying = true; updatePlayStates(); }).catch(() => { isPlaying = false; updatePlayStates(); });
@@ -617,14 +542,44 @@
                 playTrack(index);
             }
 
-            // Поиск
-            async function performSearch(query) {
-                searchBtn.disabled = true;
-                searchBtn.textContent = 'Поиск...';
-                const results = await searchYouTube(query);
-                renderSearchResults(results);
-                searchBtn.disabled = false;
-                searchBtn.textContent = 'Найти';
+            // Audius: поиск
+            async function searchAudius(query) {
+                try {
+                    const res = await fetch(`${AUDIUS_API}tracks/search?query=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    if (!data.data) return [];
+                    return data.data.map(track => ({
+                        id: 'au_' + track.id,
+                        title: track.title,
+                        artist: track.user.name,
+                        cover: track.artwork ? track.artwork['480x480'] || track.artwork['1000x1000'] : '#ffffff',
+                        url: track.stream_url ? (track.stream_url.startsWith('http') ? track.stream_url : 'https://api.audius.co' + track.stream_url) : null,
+                        isPlaceholder: false,
+                    }));
+                } catch (err) {
+                    console.error('Ошибка поиска Audius:', err);
+                    return [];
+                }
+            }
+
+            // Audius: топ-чарты
+            async function fetchTrendingTracks() {
+                try {
+                    const res = await fetch(`${AUDIUS_API}tracks/trending?limit=20`);
+                    const data = await res.json();
+                    if (!data.data) return [];
+                    return data.data.map(track => ({
+                        id: 'au_' + track.id,
+                        title: track.title,
+                        artist: track.user.name,
+                        cover: track.artwork ? track.artwork['480x480'] || track.artwork['1000x1000'] : '#ffffff',
+                        url: track.stream_url ? (track.stream_url.startsWith('http') ? track.stream_url : 'https://api.audius.co' + track.stream_url) : null,
+                        isPlaceholder: false,
+                    }));
+                } catch (err) {
+                    console.error('Ошибка топ-чартов:', err);
+                    return [];
+                }
             }
 
             function renderSearchResults(results) {
@@ -653,13 +608,28 @@
                 }
             }
 
-            searchBtn.addEventListener('click', () => {
+            async function loadTrendingTracks() {
+                searchResultsGrid.innerHTML = '<p style="color:var(--text-tertiary)">Загрузка топ-чартов...</p>';
+                const trending = await fetchTrendingTracks();
+                renderSearchResults(trending);
+                searchInput.value = '';
+            }
+
+            searchBtn.addEventListener('click', async () => {
                 const query = searchInput.value.trim();
-                if (query) performSearch(query);
+                if (query) {
+                    searchBtn.disabled = true;
+                    searchBtn.textContent = 'Поиск...';
+                    const results = await searchAudius(query);
+                    renderSearchResults(results);
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = 'Найти';
+                }
             });
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchBtn.click();
             });
+            trendingBtn.addEventListener('click', loadTrendingTracks);
 
             likedSection.addEventListener('click', () => {
                 if (isPlayingLikedPlaylist()) togglePlay();
