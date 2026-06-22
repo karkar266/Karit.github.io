@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Clone — Синий акцент</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Spotify Clone – Синий акцент + иконки</title>
     <style>
         :root {
             --bg-dark: #0a1128;
@@ -39,6 +39,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* ---------- Сайдбар ---------- */
         .sidebar {
             position: fixed;
             top: 0;
@@ -51,6 +52,7 @@
             z-index: 50;
             border-right: 1px solid rgba(255, 255, 255, 0.05);
             padding-top: 24px;
+            transition: transform 0.3s ease;
         }
         .sidebar-nav {
             display: flex;
@@ -108,6 +110,36 @@
             font-weight: 700;
         }
 
+        /* ---------- Мобильное меню ---------- */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: var(--bg-sidebar);
+            z-index: 60;
+            align-items: center;
+            justify-content: space-around;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .mobile-nav-item {
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .mobile-nav-item.active {
+            color: var(--text-primary);
+            font-weight: 700;
+            background: rgba(255,255,255,0.06);
+        }
+
+        /* ---------- Основной контент ---------- */
         .main-content {
             margin-left: var(--sidebar-width);
             margin-bottom: var(--player-height);
@@ -129,6 +161,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* ---------- Блок «Любимое» ---------- */
         .liked-section {
             margin-bottom: 32px;
             cursor: pointer;
@@ -165,7 +198,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
             transition: background var(--transition-speed) ease, transform var(--transition-speed) ease;
             pointer-events: none;
         }
@@ -174,6 +206,7 @@
             transform: scale(1.08);
         }
 
+        /* ---------- Сетка треков ---------- */
         .tracks-section { margin-top: 8px; }
         .tracks-grid {
             display: grid;
@@ -185,21 +218,10 @@
         @media (max-width: 800px) {
             .tracks-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
             :root { --tile-cover-size: 90px; }
-            .sidebar { width: 160px; --sidebar-width: 160px; }
-            .main-content { margin-left: 160px; padding: 24px 16px 16px; }
-            .liked-card { padding: 18px 20px; }
-            .liked-title { font-size: 22px; }
-            .play-circle { width: 52px; height: 52px; font-size: 26px; }
         }
         @media (max-width: 550px) {
             .tracks-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
             :root { --tile-cover-size: 70px; }
-            .sidebar { width: 120px; --sidebar-width: 120px; }
-            .main-content { margin-left: 120px; padding: 16px 10px 10px; }
-            .sidebar-item { font-size: 12px; padding: 10px 8px; }
-            .liked-card { flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px; }
-            .play-circle { align-self: flex-end; width: 48px; height: 48px; font-size: 24px; }
-            .liked-title { font-size: 20px; }
         }
 
         .track-tile {
@@ -281,6 +303,7 @@
             width: 100%;
         }
 
+        /* ---------- Заглушки страниц ---------- */
         .placeholder-page {
             display: flex;
             align-items: center;
@@ -292,7 +315,6 @@
             letter-spacing: 0.04em;
             text-align: center;
         }
-
         .upload-page-content {
             display: flex;
             flex-direction: column;
@@ -346,10 +368,8 @@
         .play-from-upload {
             background: none;
             border: none;
-            font-size: 22px;
             cursor: pointer;
             color: var(--text-primary);
-            transition: all var(--transition-speed) ease;
             padding: 4px;
             border-radius: 50%;
             display: flex;
@@ -357,14 +377,11 @@
             justify-content: center;
             width: 34px;
             height: 34px;
-            flex-shrink: 0;
+            transition: 0.2s;
         }
-        .play-from-upload:hover {
-            background: rgba(255,255,255,0.1);
-            transform: scale(1.15);
-        }
+        .play-from-upload:hover { background: rgba(255,255,255,0.1); }
 
-        /* Плеер — фиксированная сетка */
+        /* ---------- Плеер (иконки SVG) ---------- */
         .player {
             position: fixed;
             bottom: 0;
@@ -425,33 +442,38 @@
         .ctrl-btn {
             background: none;
             border: none;
-            font-size: 28px;
             cursor: pointer;
-            transition: all var(--transition-speed) ease;
             padding: 6px;
             border-radius: 50%;
-            line-height: 1;
-            color: var(--text-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             width: 44px;
             height: 44px;
+            transition: all 0.2s;
+            color: var(--text-primary);
+        }
+        .ctrl-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
         }
         .ctrl-btn:hover { transform: scale(1.15); background: rgba(255,255,255,0.06); }
-        .ctrl-btn:active { transform: scale(0.9); transition: transform 0.08s ease; }
+        .ctrl-btn:active { transform: scale(0.9); }
         .ctrl-btn.play-btn {
-            font-size: 36px;
             width: 50px;
             height: 50px;
             background: rgba(255,255,255,0.08);
         }
-        .ctrl-btn.play-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.1); }
-        .ctrl-btn.like-btn {
-            font-size: 26px;
-            transition: all 0.25s ease;
+        .ctrl-btn.play-btn svg {
+            width: 28px;
+            height: 28px;
         }
-        .ctrl-btn.like-btn.liked { animation: heartPop 0.35s ease; }
+        .ctrl-btn.play-btn:hover { background: rgba(255,255,255,0.15); }
+        .ctrl-btn.like-btn.liked svg { fill: var(--heart-red); animation: heartPop 0.35s ease; }
+        .ctrl-btn.shuffle-active {
+            color: var(--accent);
+        }
         @keyframes heartPop {
             0% { transform: scale(1); }
             30% { transform: scale(1.4); }
@@ -476,8 +498,17 @@
             font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
             white-space: nowrap;
         }
-        .player-volume { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
-        .volume-icon { font-size: 18px; }
+        .player-volume {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+        }
+        .player-volume svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
         input[type="range"] {
             -webkit-appearance: none;
             width: 80px;
@@ -499,19 +530,36 @@
         }
         .hidden-input { display: none; }
 
-        @media (max-width: 700px) {
-            .player { padding: 0 10px; grid-template-columns: 1fr auto 1fr; }
+        /* ---------- Адаптив под мобильные ---------- */
+        @media (max-width: 600px) {
+            .sidebar { display: none; }
+            .mobile-nav { display: flex; }
+            .main-content {
+                margin-left: 0;
+                margin-top: 48px;
+                padding: 20px 16px;
+            }
+            :root { --player-height: 60px; }
+            .player {
+                padding: 0 12px;
+                grid-template-columns: 1fr auto 1fr;
+            }
             .player-info { gap: 6px; }
-            .player-cover-mini { width: 32px; height: 32px; font-size: 18px; }
+            .player-cover-mini { width: 34px; height: 34px; font-size: 18px; }
             .player-track-title { font-size: 11px; }
             .player-track-artist { font-size: 10px; }
-            .player-controls { gap: 8px; }
-            .ctrl-btn { font-size: 22px; width: 34px; height: 34px; padding: 4px; }
-            .ctrl-btn.play-btn { font-size: 26px; width: 38px; height: 38px; }
+            .player-controls { gap: 10px; }
+            .ctrl-btn { width: 36px; height: 36px; padding: 4px; }
+            .ctrl-btn svg { width: 20px; height: 20px; }
+            .ctrl-btn.play-btn { width: 42px; height: 42px; }
+            .ctrl-btn.play-btn svg { width: 24px; height: 24px; }
             .player-right { gap: 8px; }
             .player-time { font-size: 10px; gap: 4px; }
             .player-volume { gap: 4px; }
             input[type="range"] { width: 50px; }
+            .liked-card { padding: 16px 20px; }
+            .liked-title { font-size: 20px; }
+            .play-circle { width: 48px; height: 48px; }
         }
     </style>
 </head>
@@ -527,23 +575,36 @@
         </div>
     </aside>
 
+    <nav class="mobile-nav" id="mobileNav">
+        <span class="mobile-nav-item active" data-page="main">Главная</span>
+        <span class="mobile-nav-item" data-page="search">Поиск</span>
+        <span class="mobile-nav-item" data-page="upload">Загрузки</span>
+        <span class="mobile-nav-item" data-page="account">Аккаунт</span>
+    </nav>
+
     <main class="main-content" id="mainContent">
         <div class="page active" id="page-main">
             <div class="liked-section" id="likedSection" title="Запустить любимые треки в случайном порядке">
                 <div class="liked-card">
-                    <div class="liked-text">
-                        <span class="liked-title">Любимое</span>
+                    <div class="liked-text"><span class="liked-title">Любимое</span></div>
+                    <div class="play-circle" id="likedPlayCircle">
+                        <!-- Иконка Play -->
+                        <svg id="likedIconPlay" width="28" height="28" viewBox="0 0 24 24" fill="white">
+                            <polygon points="6,4 20,12 6,20"/>
+                        </svg>
+                        <!-- Иконка Pause -->
+                        <svg id="likedIconPause" width="28" height="28" viewBox="0 0 24 24" fill="white" style="display:none;">
+                            <rect x="5" y="4" width="4" height="16"/>
+                            <rect x="15" y="4" width="4" height="16"/>
+                        </svg>
                     </div>
-                    <div class="play-circle">▶</div>  <!-- Обычный символ -->
                 </div>
             </div>
             <div class="tracks-section">
                 <div class="tracks-grid" id="tracksGrid"></div>
             </div>
         </div>
-        <div class="page" id="page-search">
-            <div class="placeholder-page">Поиск</div>
-        </div>
+        <div class="page" id="page-search"><div class="placeholder-page">Поиск</div></div>
         <div class="page" id="page-upload">
             <div class="upload-page-content">
                 <p style="font-size:18px;color:var(--text-secondary);">Загрузите свои аудиофайлы</p>
@@ -552,34 +613,60 @@
                 <div class="uploaded-list" id="uploadedList"></div>
             </div>
         </div>
-        <div class="page" id="page-account">
-            <div class="placeholder-page">Аккаунт</div>
-        </div>
+        <div class="page" id="page-account"><div class="placeholder-page">Аккаунт</div></div>
     </main>
 
     <footer class="player" id="player">
-        <div class="player-info" id="playerInfo">
+        <div class="player-info">
             <div class="player-cover-mini" id="playerCoverMini">?</div>
             <div class="player-track-details">
                 <span class="player-track-title" id="playerTitle">—</span>
                 <span class="player-track-artist" id="playerArtist">—</span>
             </div>
         </div>
+
         <div class="player-controls">
-            <button class="ctrl-btn" id="btnShuffle" title="Перемешать">🔀</button>
-            <button class="ctrl-btn" id="btnPrev" title="Предыдущий трек">⏮️</button>
-            <button class="ctrl-btn play-btn" id="btnPlay" title="Воспроизвести / Пауза">▶</button>
-            <button class="ctrl-btn" id="btnNext" title="Следующий трек">⏭️</button>
-            <button class="ctrl-btn like-btn" id="btnLike" title="Добавить / Убрать из Любимых">♡</button>
+            <button class="ctrl-btn" id="btnShuffle" title="Перемешать">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 4l3 3-3 3M21 7H9a4 4 0 000 8h6a4 4 0 010 8H3M18 20l3-3-3-3"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn" id="btnPrev" title="Предыдущий трек">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="16,4 8,12 16,20"/>
+                    <rect x="4" y="4" width="2" height="16"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn play-btn" id="btnPlay" title="Воспроизвести / Пауза">
+                <svg id="iconPlay" viewBox="0 0 24 24">
+                    <polygon points="6,4 20,12 6,20"/>
+                </svg>
+                <svg id="iconPause" viewBox="0 0 24 24" style="display:none;">
+                    <rect x="5" y="4" width="4" height="16"/>
+                    <rect x="15" y="4" width="4" height="16"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn" id="btnNext" title="Следующий трек">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="8,4 16,12 8,20"/>
+                    <rect x="18" y="4" width="2" height="16"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn like-btn" id="btnLike" title="Добавить / Убрать из Любимых">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </button>
         </div>
+
         <div class="player-right">
-            <div class="player-time" id="playerTime">
-                <span id="timeCurrent">00:00</span>
-                <span>/</span>
-                <span id="timeDuration">00:00</span>
+            <div class="player-time">
+                <span id="timeCurrent">00:00</span><span>/</span><span id="timeDuration">00:00</span>
             </div>
             <div class="player-volume">
-                <span class="volume-icon">🔊</span>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
                 <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8">
             </div>
         </div>
@@ -587,6 +674,7 @@
 
     <script>
         (function() {
+            // --------------------- Глобальное состояние ---------------------
             let tracks = [];
             const INITIAL_PLACEHOLDER_COUNT = 8;
 
@@ -609,12 +697,15 @@
             let currentPlaylist = [];
             let currentPlaylistIndex = -1;
             let isPlaying = false;
+            let shuffleMode = false;
 
             const audio = new Audio();
             audio.preload = 'metadata';
             audio.volume = 0.8;
 
+            // --------------------- DOM элементы ---------------------
             const sidebarItems = document.querySelectorAll('.sidebar-item');
+            const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
             const pages = document.querySelectorAll('.page');
             const tracksGrid = document.getElementById('tracksGrid');
             const likedSection = document.getElementById('likedSection');
@@ -634,11 +725,21 @@
             const uploadedList = document.getElementById('uploadedList');
             const mainContent = document.getElementById('mainContent');
 
+            const iconPlay = document.getElementById('iconPlay');
+            const iconPause = document.getElementById('iconPause');
+            const likedIconPlay = document.getElementById('likedIconPlay');
+            const likedIconPause = document.getElementById('likedIconPause');
+
             let currentPage = 'main';
 
+            // --------------------- Навигация ---------------------
             function switchPage(pageName) {
                 currentPage = pageName;
                 sidebarItems.forEach(item => {
+                    const page = item.getAttribute('data-page');
+                    item.classList.toggle('active', page === pageName);
+                });
+                mobileNavItems.forEach(item => {
                     const page = item.getAttribute('data-page');
                     item.classList.toggle('active', page === pageName);
                 });
@@ -648,13 +749,18 @@
                 mainContent.scrollTop = 0;
             }
 
-            sidebarItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    const pageName = item.getAttribute('data-page');
-                    if (pageName) switchPage(pageName);
+            function addNavListeners(elements) {
+                elements.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const pageName = item.getAttribute('data-page');
+                        if (pageName) switchPage(pageName);
+                    });
                 });
-            });
+            }
+            addNavListeners(sidebarItems);
+            addNavListeners(mobileNavItems);
 
+            // --------------------- Рендер сетки ---------------------
             function renderTrackGrid() {
                 const sorted = [...tracks].sort((a, b) => {
                     if (a.isPlaceholder === b.isPlaceholder) return 0;
@@ -700,6 +806,7 @@
                 }
             }
 
+            // --------------------- Плеер ---------------------
             function playTrack(playlistIndex) {
                 if (playlistIndex < 0 || playlistIndex >= currentPlaylist.length) return;
                 currentPlaylistIndex = playlistIndex;
@@ -715,16 +822,19 @@
                     audio.play().then(() => {
                         isPlaying = true;
                         updatePlayButtonState();
+                        updateLikedPlayCircle();
                     }).catch(err => {
                         console.warn('Ошибка воспроизведения:', err.message);
                         isPlaying = false;
                         updatePlayButtonState();
+                        updateLikedPlayCircle();
                     });
                 } else {
                     audio.pause();
                     audio.src = '';
                     isPlaying = false;
                     updatePlayButtonState();
+                    updateLikedPlayCircle();
                     if (!track.isPlaceholder) console.log('Play трек: ' + track.title);
                 }
             }
@@ -744,20 +854,47 @@
             }
 
             function updatePlayButtonState() {
-                // Используем обычные текстовые символы для стабильности
-                btnPlay.textContent = isPlaying ? '⏸' : '▶';
-                btnPlay.title = isPlaying ? 'Пауза' : 'Воспроизвести';
+                if (isPlaying) {
+                    iconPlay.style.display = 'none';
+                    iconPause.style.display = 'block';
+                    btnPlay.title = 'Пауза';
+                } else {
+                    iconPlay.style.display = 'block';
+                    iconPause.style.display = 'none';
+                    btnPlay.title = 'Воспроизвести';
+                }
+                // Обновляем иконку Любимого
+                updateLikedPlayCircle();
+            }
+
+            function updateLikedPlayCircle() {
+                if (isPlaying && isPlayingLikedPlaylist()) {
+                    likedIconPlay.style.display = 'none';
+                    likedIconPause.style.display = 'block';
+                } else {
+                    likedIconPlay.style.display = 'block';
+                    likedIconPause.style.display = 'none';
+                }
             }
 
             function updateLikeButtonState(track) {
+                const likeBtn = document.getElementById('btnLike');
                 if (track && likedTrackIds.has(track.id)) {
-                    btnLike.textContent = '❤️';
-                    btnLike.classList.add('liked');
-                    btnLike.title = 'Убрать из Любимых';
+                    likeBtn.classList.add('liked');
+                    likeBtn.title = 'Убрать из Любимых';
                 } else {
-                    btnLike.textContent = '♡';
-                    btnLike.classList.remove('liked');
-                    btnLike.title = 'Добавить в Любимые';
+                    likeBtn.classList.remove('liked');
+                    likeBtn.title = 'Добавить в Любимые';
+                }
+            }
+
+            function updateShuffleButtonState() {
+                if (shuffleMode) {
+                    btnShuffle.classList.add('shuffle-active');
+                    btnShuffle.title = 'Выключить перемешивание';
+                } else {
+                    btnShuffle.classList.remove('shuffle-active');
+                    btnShuffle.title = 'Перемешать';
                 }
             }
 
@@ -771,6 +908,7 @@
                     if (track && track.isPlaceholder) console.log('Трек-заглушка, невозможно воспроизвести');
                     isPlaying = false;
                     updatePlayButtonState();
+                    updateLikedPlayCircle();
                     return;
                 }
                 if (isPlaying) {
@@ -780,19 +918,35 @@
                     audio.play().then(() => { isPlaying = true; }).catch(() => { isPlaying = false; });
                 }
                 updatePlayButtonState();
+                updateLikedPlayCircle();
+            }
+
+            function getRandomIndex() {
+                if (currentPlaylist.length === 0) return -1;
+                return Math.floor(Math.random() * currentPlaylist.length);
             }
 
             function nextTrack() {
                 if (currentPlaylist.length === 0) return;
-                let next = currentPlaylistIndex + 1;
-                if (next >= currentPlaylist.length) next = 0;
+                let next;
+                if (shuffleMode) {
+                    next = getRandomIndex();
+                } else {
+                    next = currentPlaylistIndex + 1;
+                    if (next >= currentPlaylist.length) next = 0;
+                }
                 playTrack(next);
             }
 
             function prevTrack() {
                 if (currentPlaylist.length === 0) return;
-                let prev = currentPlaylistIndex - 1;
-                if (prev < 0) prev = currentPlaylist.length - 1;
+                let prev;
+                if (shuffleMode) {
+                    prev = getRandomIndex();
+                } else {
+                    prev = currentPlaylistIndex - 1;
+                    if (prev < 0) prev = currentPlaylist.length - 1;
+                }
                 playTrack(prev);
             }
 
@@ -808,14 +962,9 @@
                 updateLikeButtonState(track);
             }
 
-            function shufflePlaylist() {
-                if (currentPlaylist.length === 0) currentPlaylist = [...tracks];
-                for (let i = currentPlaylist.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [currentPlaylist[i], currentPlaylist[j]] = [currentPlaylist[j], currentPlaylist[i]];
-                }
-                currentPlaylistIndex = 0;
-                playTrack(0);
+            function toggleShuffle() {
+                shuffleMode = !shuffleMode;
+                updateShuffleButtonState();
             }
 
             function isPlayingLikedPlaylist() {
@@ -826,7 +975,6 @@
             function playLikedRandom() {
                 const likedTracks = tracks.filter(t => likedTrackIds.has(t.id));
                 if (likedTracks.length === 0) {
-                    alert('Нет любимых треков');
                     return;
                 }
                 const shuffled = [...likedTracks];
@@ -848,6 +996,7 @@
                 if (currentPage !== 'main') switchPage('main');
             }
 
+            // --------------------- Обработчики ---------------------
             likedSection.addEventListener('click', () => {
                 if (isPlayingLikedPlaylist()) {
                     togglePlay();
@@ -860,7 +1009,7 @@
             btnNext.addEventListener('click', nextTrack);
             btnPrev.addEventListener('click', prevTrack);
             btnLike.addEventListener('click', toggleLike);
-            btnShuffle.addEventListener('click', shufflePlaylist);
+            btnShuffle.addEventListener('click', toggleShuffle);
 
             audio.addEventListener('loadedmetadata', () => {
                 timeDuration.textContent = isFinite(audio.duration) ? formatTime(audio.duration) : '00:00';
@@ -869,12 +1018,21 @@
                 timeCurrent.textContent = isFinite(audio.currentTime) ? formatTime(audio.currentTime) : '00:00';
             });
             audio.addEventListener('ended', nextTrack);
-            audio.addEventListener('play', () => { isPlaying = true; updatePlayButtonState(); });
-            audio.addEventListener('pause', () => { isPlaying = false; updatePlayButtonState(); });
+            audio.addEventListener('play', () => {
+                isPlaying = true;
+                updatePlayButtonState();
+                updateLikedPlayCircle();
+            });
+            audio.addEventListener('pause', () => {
+                isPlaying = false;
+                updatePlayButtonState();
+                updateLikedPlayCircle();
+            });
             audio.addEventListener('error', () => {
                 console.warn('Ошибка загрузки аудио');
                 isPlaying = false;
                 updatePlayButtonState();
+                updateLikedPlayCircle();
             });
 
             function formatTime(sec) {
@@ -889,6 +1047,7 @@
             });
             audio.volume = parseFloat(volumeSlider.value);
 
+            // --------------------- Загрузка файлов ---------------------
             uploadBtn.addEventListener('click', () => fileInput.click());
 
             fileInput.addEventListener('change', (event) => {
@@ -897,7 +1056,7 @@
                 files.forEach(file => {
                     const url = URL.createObjectURL(file);
                     const title = file.name.replace(/\.[^/.]+$/, '');
-                    const newTrack = {
+                    tracks.unshift({
                         id: Date.now() + Math.random(),
                         title: title || 'Без названия',
                         artist: '',
@@ -905,13 +1064,11 @@
                         url: url,
                         isPlaceholder: false,
                         fileName: file.name,
-                    };
-                    tracks.unshift(newTrack);
+                    });
                 });
                 renderTrackGrid();
                 updateUploadedList();
                 fileInput.value = '';
-                console.log(`Загружено треков: ${files.length}`);
             });
 
             function updateUploadedList() {
@@ -927,7 +1084,9 @@
                     item.innerHTML = `
                         <span class="track-name">${escapeHTML(track.title)}</span>
                         <span style="color:var(--text-tertiary);font-size:12px;flex-shrink:0;">${escapeHTML(track.fileName || '')}</span>
-                        <button class="play-from-upload" title="Играть" data-track-id="${track.id}">▶</button>
+                        <button class="play-from-upload" title="Играть" data-track-id="${track.id}">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="6,4 20,12 6,20"/></svg>
+                        </button>
                     `;
                     item.querySelector('.play-from-upload').addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -939,6 +1098,7 @@
                 });
             }
 
+            // Горячие клавиши
             document.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
                 switch (e.code) {
@@ -955,8 +1115,9 @@
                 updatePlayerUI(null);
                 updatePlayButtonState();
                 updateLikeButtonState(null);
+                updateShuffleButtonState();
+                updateLikedPlayCircle();
                 switchPage('main');
-                console.log('Spotify Clone готов. Синий акцент, shuffle, громкость, загрузка файлов.');
             }
             init();
         })();
